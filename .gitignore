@@ -1,0 +1,19 @@
+# Build output
+build/
+build-*/
+cmake-build-*/
+
+# IDE Specific files
+*.pro.user
+CMakeLists.txt.user
+.qtc_clangd/
+.idea/
+
+# Compiled objects
+*.o
+*.obj
+*.exe
+
+# OS junk
+.DS_Store
+Thumbs.db
