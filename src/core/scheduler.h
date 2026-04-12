@@ -4,9 +4,10 @@
 
 #ifndef BACKEND_SCHEDULER_H
 #define BACKEND_SCHEDULER_H
-#include "../models/event.h"
-#include "../models/process.h"
+#include "../core/event.h"
+#include "../core/process.h"
 #include <vector>
+#include <queue>
 
 class scheduler {
     protected:
@@ -29,6 +30,7 @@ public:
 
     // void run(){}
     virtual void run() = 0;
+    virtual bool tick() = 0;
 };
 
 

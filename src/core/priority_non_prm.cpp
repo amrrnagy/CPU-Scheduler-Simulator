@@ -1,61 +1,62 @@
-#include "priority_non_prm.h"
+#include "Priority_non_prm.h"
 #include <algorithm>
-#include <queue>
 
-struct compare {
-    bool operator()(const process& a, const process& b) const {
-        if (a.getPriority() == b.getPriority()) {
-            return a.getArrivalTime() > b.getArrivalTime();
-        }
-        return a.getPriority() > b.getPriority();
-    }
-};
 bool comp_arrival_time(const process& a, const process& b) {
     return a.getArrivalTime() < b.getArrivalTime();
 }
-void priority::run() {
-    std::sort(processesList.begin(), processesList.end(), comp_arrival_time);
-    std::priority_queue<process, std::vector<process>, compare> ready_queue;
-    int curr_index=0;
-    int n=processesList.size();
-    double totalTurnaroundTime=0,totalWaitingTime=0;
-    int com_process =0;
-    while (com_process < n) {
-        while (curr_index<n && processesList[curr_index].getArrivalTime()<=currentTime) {
-            ready_queue.push(processesList[curr_index]);
-            curr_index++;
-        }
+
+bool Priority_Non_Prm::tick() {
+    if (!is_sorted) {
+        std::stable_sort(processesList.begin(), processesList.end(), comp_arrival_time);
+        offline_count = processesList.size();
+        is_sorted = true;
+    }
+
+    while (curr_index < offline_count && processesList[curr_index].getArrivalTime() <= currentTime) {
+        ready_queue.push(processesList[curr_index]);
+        curr_index++;
+    }
+
+    while (!incomingProcesses.empty()) {
+        process p = incomingProcesses.front();
+        incomingProcesses.pop();
+        processesList.push_back(p);
+        ready_queue.push(p);
+    }
+
+    if (curr_process == nullptr) {
         if (ready_queue.empty()) {
             currentTime++;
-            continue;
+            return true;
         }
-        process curr_process=ready_queue.top();
+        curr_process = new process(ready_queue.top());
         ready_queue.pop();
-        int start_time=currentTime;
-        int end_time=start_time+ curr_process.getBurstTime();
-        currentTime=end_time;
-        com_process++;
-        timeline.push_back(event(curr_process.getId(),start_time,end_time));
-        int turnaroundTime = end_time - curr_process.getArrivalTime();
-        int waitingTime = turnaroundTime - curr_process.getBurstTime();
+        block_start_time = currentTime;
+    }
+
+    curr_process->setRemainingTime(curr_process->getRemainingTime() - 1);
+    currentTime++;
+
+    if (curr_process->getRemainingTime() == 0) {
+        timeline.push_back(event(curr_process->getId(), block_start_time, currentTime));
+
+        int turnaroundTime = currentTime - curr_process->getArrivalTime();
+        int waitingTime = turnaroundTime - curr_process->getBurstTime();
+
         totalTurnaroundTime += turnaroundTime;
         totalWaitingTime += waitingTime;
+        com_process++;
 
+        averageTurnaroundTime = totalTurnaroundTime / processesList.size();
+        averageWaitingTime = totalWaitingTime / processesList.size();
+
+        delete curr_process;
+        curr_process = nullptr;
     }
-    if (n > 0) {
-        averageTurnaroundTime = totalTurnaroundTime / n;
-        averageWaitingTime = totalWaitingTime / n;
+
+    if (com_process == processesList.size() && ready_queue.empty() && incomingProcesses.empty() && curr_process == nullptr) {
+        return false;
     }
 
-
-
-
-
-
-
-
-
-
-
-
+    return true;
 }
