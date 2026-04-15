@@ -7,9 +7,11 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QTimer>
 #include <vector>
 #include <QString>
+
+#include "../core/simulator.h"
+#include "../core/models/process.h"
 
 // ==========================================
 // 1. Core Data Structure
@@ -42,11 +44,15 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
+
+public slots:
+    // This MUST be a slot so the background thread can call it safely
+    void onLiveTimerTick();
 
 private slots:
     // ==========================================
-    // 3. UI Event Handlers (Auto-connected via name matching)
+    // 3. UI Event Handlers
     // ==========================================
     void on_btn_Add_clicked();
     void on_btn_RunLive_clicked();
@@ -54,29 +60,26 @@ private slots:
     void on_btn_Reset_clicked();
     void on_combo_Scheduler_currentIndexChanged(int index);
 
-    // ==========================================
-    // 4. Custom Timer Slot
-    // ==========================================
-    void onLiveTimerTick();
-
 private:
     Ui::MainWindow *ui;
 
     // ==========================================
-    // 5. Backend State Variables
+    // 5. State Variables
     // ==========================================
-    std::vector<Process> processList; // Stores all processes
-    QTimer *liveTimer;                // The 1-second clock
+    std::vector<Process> processList; // Stores all frontend processes
 
     int currentTime;                  // Tracks global execution time
     int nextPid;                      // Automatically assigns P1, P2, P3...
     bool isSimulationRunning;         // Prevents double-clicks while running
 
+    simulator* activeSimulator = nullptr; // Encapsulates the backend logic
+    int ganttX;                       // X coordinate for drawing the Gantt chart
+
     // ==========================================
     // 6. Helper Functions
     // ==========================================
-    void updateProcessTable();        // Refreshes the UI table
-    void drawGanttChart();            // Handles the QGraphicsView drawing
-    void calculateMetrics();          // Updates the Wait/Turnaround labels
+    void updateProcessTable();
+    void drawGanttChart();
+    void calculateMetrics();
 };
 #endif //CPU_SCHEDULER_SIMULATOR_MAINWINDOW_H

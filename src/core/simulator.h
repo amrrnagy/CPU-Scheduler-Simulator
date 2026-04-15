@@ -1,8 +1,3 @@
-// simulator.h
-// FIX (Bug 10): Previously an empty class. The simulator owns the scheduler,
-// drives the tick() loop at 1-second intervals (live mode), and exposes an
-// addProcess() method so the GUI can inject new processes at any time.
-
 #ifndef CPUSCHEDULERSIMULATOR_SIMULATOR_H
 #define CPUSCHEDULERSIMULATOR_SIMULATOR_H
 
@@ -22,7 +17,7 @@
 enum class SchedulerType {
     FCFS,
     SJF_NonPreemptive,
-    SJF_Preemptive,       // SRTF
+    SJF_Preemptive,
     Priority_NonPreemptive,
     Priority_Preemptive,
     RoundRobin
@@ -30,45 +25,38 @@ enum class SchedulerType {
 
 class simulator {
     std::unique_ptr<scheduler> sched;
-    std::atomic<bool>          running   { false };
-    std::atomic<bool>          paused    { false };
+    std::atomic<bool>          running { false };
+    std::atomic<bool>          paused  { false };
     std::thread                sim_thread;
     std::mutex                 process_mutex;
 
-    // Called every tick so the GUI can refresh the Gantt chart and table.
+public:
+    // FIX (Bug 2): was private — GUI needs to assign this directly.
     std::function<void()> on_tick_callback;
 
-public:
-    // Creates the correct scheduler for the chosen algorithm.
-    // Call loadProcesses() on the returned simulator before starting.
     explicit simulator(SchedulerType type, int rr_quantum = 2);
     ~simulator();
 
-    // Load the initial list of processes before calling start() or runBatch().
     void loadProcesses(const std::vector<process>& list);
-
-    // Add a process dynamically while the simulator is running.
-    // Thread-safe: can be called from the GUI thread.
     void addProcess(const process& p);
 
-    // Register a callback the GUI receives on every tick (for live updates).
     void setOnTickCallback(std::function<void()> cb) { on_tick_callback = std::move(cb); }
 
-    // Live mode: advances one tick per second in a background thread.
     void start();
     void stop();
     void pause();
     void resume();
     bool isRunning() const { return running.load(); }
 
-    // Batch mode: runs to completion instantly, no timer.
     void runBatch();
 
-    // Read-only accessors for the GUI.
-    std::vector<event> getTimeline()          const { return sched->getTimeline();          }
-    double             getAvgWaitingTime()    const { return sched->getAvgWaitingTime();    }
-    double             getAvgTurnaroundTime() const { return sched->getAvgTurnaroundTime(); }
-    int                getCurrentTime()       const { return sched->getCurrentTime();       }
+    // FIX (Bug 1): getTimeline() was declared twice here — duplicate causes a compile error.
+    // Only one declaration kept.
+    std::vector<event> getTimeline()         const { return sched ? sched->getTimeline()         : std::vector<event>{}; }
+    double             getAvgWaitingTime()   const { return sched ? sched->getAvgWaitingTime()   : 0.0; }
+    double             getAvgTurnaroundTime()const { return sched ? sched->getAvgTurnaroundTime(): 0.0; }
+    int                getCurrentTime()      const { return sched ? sched->getCurrentTime()      : 0;   }
+    int                getCurrentProcessId() const { return sched ? sched->getCurrentProcessId() : -1;  }
 };
 
 #endif //CPUSCHEDULERSIMULATOR_SIMULATOR_H

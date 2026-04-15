@@ -4,12 +4,11 @@
 #include "scheduler.h"
 #include <queue>
 
-// Non-preemptive SJF: once a process starts it runs to completion.
 class SJF : public scheduler {
     struct Comp_burst_time {
         bool operator()(const process& a, const process& b) const {
             if (a.getBurstTime() == b.getBurstTime())
-                return a.getArrivalTime() > b.getArrivalTime(); // tie-break: earlier arrival wins
+                return a.getArrivalTime() > b.getArrivalTime();
             return a.getBurstTime() > b.getBurstTime();
         }
     };
@@ -21,11 +20,13 @@ class SJF : public scheduler {
 
 public:
     bool tick() override;
-    // FIX (Bug 4): run() is declared in the base class as virtual, so override is valid here.
     void run()  override;
+    // FIX (Bug 9): override added so live Gantt shows the correct process
+    int getCurrentProcessId() const override {
+        return curr_process ? curr_process->getId() : -1;
+    }
 };
 
-// Preemptive SJF (Shortest Remaining Time First).
 class SRTF : public scheduler {
     struct Comp_remaining_time {
         bool operator()(const process* a, const process* b) const {
@@ -42,6 +43,9 @@ class SRTF : public scheduler {
 public:
     bool tick() override;
     void run()  override;
+    int getCurrentProcessId() const override {
+        return curr_process ? curr_process->getId() : -1;
+    }
 };
 
 #endif //BACKEND_SJF_H

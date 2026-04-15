@@ -4,14 +4,12 @@
 #include "scheduler.h"
 #include <queue>
 
-// Non-preemptive priority scheduling.
-// Lower priority number = higher priority (as per project spec).
 class Priority_Non_Prm : public scheduler {
     struct Comp_priority {
         bool operator()(const process& a, const process& b) const {
             if (a.getPriority() == b.getPriority())
-                return a.getArrivalTime() > b.getArrivalTime(); // tie-break
-            return a.getPriority() > b.getPriority();           // lower number = higher priority
+                return a.getArrivalTime() > b.getArrivalTime();
+            return a.getPriority() > b.getPriority();
         }
     };
 
@@ -23,11 +21,12 @@ class Priority_Non_Prm : public scheduler {
 public:
     bool tick() override;
     void run()  override;
+    // FIX (Bug 9)
+    int getCurrentProcessId() const override {
+        return curr_process ? curr_process->getId() : -1;
+    }
 };
 
-// FIX (Bug 7): Preemptive priority scheduling — was completely missing.
-// On each tick, the running process can be preempted if a higher-priority
-// process arrives.
 class Priority_Prm : public scheduler {
     struct Comp_priority {
         bool operator()(const process* a, const process* b) const {
@@ -44,6 +43,10 @@ class Priority_Prm : public scheduler {
 public:
     bool tick() override;
     void run()  override;
+    // FIX (Bug 9)
+    int getCurrentProcessId() const override {
+        return curr_process ? curr_process->getId() : -1;
+    }
 };
 
 #endif //BACKEND_PRIORITY_H

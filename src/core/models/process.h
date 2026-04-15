@@ -9,14 +9,15 @@ class process {
     int remainingTime;
 
 public:
-    process(const int ID, const int arr, const int burst, const int prio, int rem)
+    process(const int ID, const int arr, const int burst, const int prio, const int rem)
         : id(ID), arrivalTime(arr), burstTime(burst), priority(prio), remainingTime(rem) {}
 
-    int getId()            const { return id;            }
-    int getArrivalTime()   const { return arrivalTime;   }
-    int getBurstTime()     const { return burstTime;     }
-    int getPriority()      const { return priority;      }
-    int getRemainingTime() const { return remainingTime; }
+    [[nodiscard]] int getId()            const { return id;            }
+    [[nodiscard]] int getArrivalTime()   const { return arrivalTime;   }
+    [[nodiscard]] int getBurstTime()     const { return burstTime;     }
+    [[nodiscard]] int getPriority()      const { return priority;      }
+    [[nodiscard]] int getRemainingTime() const { return remainingTime; }
+
     void setRemainingTime(const int t) { remainingTime = t; }
 };
 
