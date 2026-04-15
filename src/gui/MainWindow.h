@@ -11,6 +11,12 @@
 #include <vector>
 #include <QString>
 
+// Backend Headers
+#include "scheduler.h"
+#include "FCFS.h"
+// #include "SJF.h"   // Uncomment when ready
+// #include "RR.h"    // Uncomment when ready
+
 // ==========================================
 // 1. Core Data Structure
 // ==========================================
@@ -65,12 +71,18 @@ private:
     // ==========================================
     // 5. Backend State Variables
     // ==========================================
-    std::vector<Process> processList; // Stores all processes
+    std::vector<Process> processList; // Stores all processes (Frontend)
     QTimer *liveTimer;                // The 1-second clock
 
     int currentTime;                  // Tracks global execution time
     int nextPid;                      // Automatically assigns P1, P2, P3...
     bool isSimulationRunning;         // Prevents double-clicks while running
+
+    // --- NEW: Variables for the Execution Engine & Drawing ---
+    scheduler* activeScheduler = nullptr;
+    std::vector<process> backendProcessList; // Formatted for the backend engine
+    int incomingIndex = 0;                   // Tracks which process arrives next
+    int ganttX = 0;                          // Tracks the X-coordinate for drawing
 
     // ==========================================
     // 6. Helper Functions
