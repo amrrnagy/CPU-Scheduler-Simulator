@@ -2,34 +2,25 @@
 #define BACKEND_SCHEDULER_H
 
 #include "../models/event.h"
-#include "../core/process.h"
+#include "../models/process.h"
 #include <vector>
 #include <queue>
 
 class scheduler {
 protected:
-    int currentTime;
-    std::vector<process> processesList;
+    // Protected means all your child classes (FCFS, RR, etc.) can write to this directly.
+    // Every algorithm will generate a timeline, so keeping it in the base class saves duplicate code.
     std::vector<event> timeline;
-    std::queue<process> incomingProcesses;
-    double averageWaitingTime,averageTurnaroundTime;
+
 public:
-    scheduler() : currentTime(0), averageWaitingTime(0.0), averageTurnaroundTime(0.0) {}
+    // A virtual destructor is critical in C++ polymorphic base classes to prevent memory leaks.
     virtual ~scheduler() = default;
-    void addProcess(const process& p) {
-        incomingProcesses.push(p);
+
+    virtual bool tick(int currentTime, std::vector<process>& incoming_list, int& incoming_index) = 0;
+
+    [[nodiscard]] std::vector<event> getTimeline() const {
+        return timeline;
     }
-
-    std::vector<event> getTimeline() const { return timeline; }
-    std::vector<process> getProcessesList() const { return processesList; }
-    double getAverageWaitingTime() const { return averageWaitingTime; }
-    double getAverageTurnaroundTime() const { return averageTurnaroundTime; }
-
-    // void run(){}
-    virtual void run() = 0;
-    virtual bool tick() = 0;
 };
-
-
 
 #endif //BACKEND_SCHEDULER_H

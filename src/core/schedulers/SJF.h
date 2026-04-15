@@ -26,6 +26,7 @@ class SJF : public scheduler {
 
 public:
     bool tick() override;
+    void run() override;
 };
 
 #endif //BACKEND_SJF_H

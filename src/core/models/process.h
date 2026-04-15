@@ -16,12 +16,7 @@ public:
             return this->arrivalTime > other.arrivalTime;
         }
 
-    int getId() const { return id; }
-    int getArrivalTime() const { return arrivalTime; }
-    int getBurstTime() const { return burstTime; }
-    int getPriority() const { return priority; }
-    int getRemainingTime() const { return remainingTime; }
-    void setRemainingTime(int t) { remainingTime = t; }
+    void setRemainingTime(const int t) { remainingTime = t; }
 };
 
 

@@ -15,16 +15,12 @@ add_executable(
         core/schedulers/scheduler.h
         core/schedulers/FCFS.h
         core/schedulers/FCFS.cpp
-        core/schedulers/SJF_prm.cpp
-        core/schedulers/SJF_prm.h
         core/schedulers/priority.h
         core/schedulers/priority.cpp
-        core/schedulers/RRS.cpp
-        core/schedulers/RRS.h
+        core/schedulers/RR.cpp
+        core/schedulers/RR.h
         core/schedulers/SJF.cpp
         core/schedulers/SJF.h
-        core/schedulers/priority_non_prm.cpp
-        core/schedulers/priority_non_prm.h
         core/simulator.cpp
         core/simulator.h
 )
