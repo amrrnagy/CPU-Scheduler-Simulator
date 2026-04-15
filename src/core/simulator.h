@@ -1,0 +1,13 @@
+//
+// Created by Amr on 4/15/2026.
+//
+
+#ifndef CPUSCHEDULERSIMULATOR_SIMULATOR_H
+#define CPUSCHEDULERSIMULATOR_SIMULATOR_H
+
+
+class simulator {
+};
+
+
+#endif //CPUSCHEDULERSIMULATOR_SIMULATOR_H
