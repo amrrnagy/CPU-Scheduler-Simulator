@@ -4,25 +4,12 @@ project(CPUSchedulerSimulator VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Use forward slashes for paths in CMake to avoid escape character issues
-set(CMAKE_PREFIX_PATH "C:/Qt/6.11.0/mingw_64")
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
-
-# 1. CREATE THE EXECUTABLE FIRST
+set(CMAKE_PREFIX_PATH "C:\\Qt\\6.11.0\\mingw_64")
 add_executable(
         Scheduler
+
         app.cpp
 
-        # Add your GUI files here!
-        gui/MainWindow.cpp
-        gui/MainWindow.h
-        gui/MainWindow.ui
-
-        # Your backend files
         core/models/process.h
         core/models/event.h
         core/schedulers/scheduler.h
@@ -37,6 +24,3 @@ add_executable(
         core/simulator.cpp
         core/simulator.h
 )
-
-# 2. LINK THE LIBRARIES AFTER
-target_link_libraries(Scheduler PRIVATE Qt6::Widgets)
