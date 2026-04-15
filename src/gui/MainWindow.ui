@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>MainWindow</class>
+    <widget class="QMainWindow" name="MainWindow">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>1100</width>
+                <height>700</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>CPU Scheduler Simulator</string>
+        </property>
+        <widget class="QWidget" name="centralwidget">
+            <layout class="QHBoxLayout" name="horizontalLayout_Main">
+
+                <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_Left">
+                        <property name="spacing">
+                            <number>15</number>
+                        </property>
+                        <property name="sizeConstraint">
+                            <enum>QLayout::SetFixedSize</enum>
+                        </property>
+
+                        <item>
+                            <widget class="QLabel" name="label_Title">
+                                <property name="font">
+                                    <font><pointsize>16</pointsize><bold>true</bold></font>
+                                </property>
+                                <property name="text">
+                                    <string>CPU Scheduler</string>
+                                </property>
+                            </widget>
+                        </item>
+
+                        <item>
+                            <widget class="QGroupBox" name="groupBox_Scheduler">
+                                <property name="title">
+                                    <string>1. Select Algorithm</string>
+                                </property>
+                                <layout class="QVBoxLayout" name="verticalLayout_2">
+                                    <item>
+                                        <widget class="QComboBox" name="combo_Scheduler">
+                                            <item><property name="text"><string>FCFS</string></property></item>
+                                            <item><property name="text"><string>SJF (Preemptive)</string></property></item>
+                                            <item><property name="text"><string>SJF (Non-Preemptive)</string></property></item>
+                                            <item><property name="text"><string>Priority (Preemptive)</string></property></item>
+                                            <item><property name="text"><string>Priority (Non-Preemptive)</string></property></item>
+                                            <item><property name="text"><string>Round Robin</string></property></item>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <layout class="QHBoxLayout" name="horizontalLayout_Quantum">
+                                            <item>
+                                                <widget class="QLabel" name="label_Quantum">
+                                                    <property name="text"><string>Time Quantum:</string></property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <widget class="QSpinBox" name="input_Quantum">
+                                                    <property name="minimum"><number>1</number></property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </item>
+                                </layout>
+                            </widget>
+                        </item>
+
+                        <item>
+                            <widget class="QGroupBox" name="groupBox_AddProcess">
+                                <property name="title">
+                                    <string>2. Add Process</string>
+                                </property>
+                                <layout class="QFormLayout" name="formLayout_Inputs">
+                                    <item row="0" column="0">
+                                        <widget class="QLabel" name="label_Arrival">
+                                            <property name="text"><string>Arrival Time:</string></property>
+                                        </widget>
+                                    </item>
+                                    <item row="0" column="1">
+                                        <widget class="QSpinBox" name="input_Arrival">
+                                            <property name="maximum"><number>9999</number></property>
+                                        </widget>
+                                    </item>
+
+                                    <item row="1" column="0">
+                                        <widget class="QLabel" name="label_Burst">
+                                            <property name="text"><string>Burst Time:</string></property>
+                                        </widget>
+                                    </item>
+                                    <item row="1" column="1">
+                                        <widget class="QSpinBox" name="input_Burst">
+                                            <property name="minimum"><number>1</number></property>
+                                            <property name="maximum"><number>9999</number></property>
+                                        </widget>
+                                    </item>
+
+                                    <item row="2" column="0">
+                                        <widget class="QLabel" name="label_Priority">
+                                            <property name="text"><string>Priority (Lower=Higher):</string></property>
+                                        </widget>
+                                    </item>
+                                    <item row="2" column="1">
+                                        <widget class="QSpinBox" name="input_Priority"/>
+                                    </item>
+
+                                    <item row="3" column="0" colspan="2">
+                                        <widget class="QPushButton" name="btn_Add">
+                                            <property name="text"><string>Add Process</string></property>
+                                        </widget>
+                                    </item>
+                                </layout>
+                            </widget>
+                        </item>
+
+                        <item>
+                            <spacer name="verticalSpacer">
+                                <property name="orientation"><enum>Qt::Vertical</enum></property>
+                                <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+                            </spacer>
+                        </item>
+
+                        <item>
+                            <widget class="QGroupBox" name="groupBox_Execution">
+                                <property name="title">
+                                    <string>3. Execution</string>
+                                </property>
+                                <layout class="QVBoxLayout" name="verticalLayout_3">
+                                    <item>
+                                        <widget class="QPushButton" name="btn_RunLive">
+                                            <property name="text"><string>▶ Run Live (1s = 1 unit)</string></property>
+                                            <property name="styleSheet"><string>background-color: #2e8b57; color: white; font-weight: bold; padding: 8px;</string></property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <widget class="QPushButton" name="btn_RunInstant">
+                                            <property name="text"><string>⚡ Run Existing Only (Instant)</string></property>
+                                            <property name="styleSheet"><string>padding: 5px;</string></property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <widget class="QPushButton" name="btn_Reset">
+                                            <property name="text"><string>Reset Simulator</string></property>
+                                            <property name="styleSheet"><string>background-color: #b22222; color: white; margin-top: 10px;</string></property>
+                                        </widget>
+                                    </item>
+                                </layout>
+                            </widget>
+                        </item>
+
+                    </layout>
+                </item>
+
+                <item>
+                    <layout class="QVBoxLayout" name="verticalLayout_Right">
+
+                        <item>
+                            <layout class="QHBoxLayout" name="horizontalLayout_Metrics">
+                                <item>
+                                    <widget class="QLabel" name="label_Time">
+                                        <property name="font"><font><pointsize>12</pointsize><bold>true</bold></font></property>
+                                        <property name="styleSheet"><string>color: #0078d7;</string></property>
+                                        <property name="text"><string>Current Time: 0s</string></property>
+                                    </widget>
+                                </item>
+                                <item>
+                                    <widget class="QLabel" name="label_Wait">
+                                        <property name="font"><font><pointsize>11</pointsize></font></property>
+                                        <property name="text"><string>Avg Waiting Time: 0.00</string></property>
+                                    </widget>
+                                </item>
+                                <item>
+                                    <widget class="QLabel" name="label_Turnaround">
+                                        <property name="font"><font><pointsize>11</pointsize></font></property>
+                                        <property name="text"><string>Avg Turnaround Time: 0.00</string></property>
+                                    </widget>
+                                </item>
+                            </layout>
+                        </item>
+
+                        <item>
+                            <widget class="QLabel" name="label_GanttTitle">
+                                <property name="font"><font><bold>true</bold></font></property>
+                                <property name="text"><string>Live Gantt Chart</string></property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QGraphicsView" name="view_Gantt">
+                                <property name="minimumSize"><size><width>0</width><height>150</height></size></property>
+                                <property name="maximumSize"><size><width>16777215</width><height>150</height></size></property>
+                                <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+                            </widget>
+                        </item>
+
+                        <item>
+                            <widget class="QLabel" name="label_TableTitle">
+                                <property name="font"><font><bold>true</bold></font></property>
+                                <property name="text"><string>Process Table &amp; Remaining Burst Times</string></property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QTableWidget" name="table_Processes">
+                                <property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property>
+                                <property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property>
+                                <attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute>
+                                <column><property name="text"><string>PID</string></property></column>
+                                <column><property name="text"><string>Arrival</string></property></column>
+                                <column><property name="text"><string>Burst</string></property></column>
+                                <column><property name="text"><string>Priority</string></property></column>
+                                <column><property name="text"><string>Remaining Time</string></property></column>
+                            </widget>
+                        </item>
+
+                    </layout>
+                </item>
+            </layout>
+        </widget>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>
