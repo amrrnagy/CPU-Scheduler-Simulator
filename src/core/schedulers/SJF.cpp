@@ -1,37 +1,43 @@
-#include "SJF_prm.h"
+#include "SJF.h"
 #include <algorithm>
-#include <queue>
 
+// FIX (Bug 5): comp_arrival_time was defined twice in the original file.
+// Define it once here as a local lambda inside each function instead
+// so there is no duplicate symbol.
 
-bool comp_arrival_time(const process& a, const process& b) {
-    return a.getArrivalTime() < b.getArrivalTime();
-}
+// ─── Non-preemptive SJF ───────────────────────────────────────────────────
+
 bool SJF::tick() {
     if (!is_sorted) {
-        std::sort(processesList.begin(), processesList.end(), comp_arrival_time);
-        offline_count = processesList.size();
+        std::sort(processesList.begin(), processesList.end(),
+                  [](const process& a, const process& b) {
+                      return a.getArrivalTime() < b.getArrivalTime();
+                  });
         is_sorted = true;
     }
 
-    while (curr_index < offline_count && processesList[curr_index].getArrivalTime() <= currentTime) {
-        ready_queue.push(processesList[curr_index]);
-        curr_index++;
+    // Admit processes that have arrived.
+    for (process& p : processesList) {
+        if (p.getArrivalTime() == currentTime && p.getRemainingTime() == p.getBurstTime())
+            ready_queue.push(p);
     }
 
+    // Drain dynamic arrivals.
     while (!incomingProcesses.empty()) {
-        process p = incomingProcesses.front();
+        processesList.push_back(incomingProcesses.front());
+        ready_queue.push(incomingProcesses.front());
         incomingProcesses.pop();
-        processesList.push_back(p);
-        ready_queue.push(p);
     }
+
     if (curr_process == nullptr) {
         if (ready_queue.empty()) {
             currentTime++;
             return true;
         }
-        curr_process = new process(ready_queue.top());
-        ready_queue.pop();
+        // Copy top process to heap-allocated object so we can mutate remainingTime.
+        curr_process     = new process(ready_queue.top());
         block_start_time = currentTime;
+        ready_queue.pop();
     }
 
     curr_process->setRemainingTime(curr_process->getRemainingTime() - 1);
@@ -40,81 +46,128 @@ bool SJF::tick() {
     if (curr_process->getRemainingTime() == 0) {
         timeline.push_back(event(curr_process->getId(), block_start_time, currentTime));
 
-        int turnaroundTime = currentTime - curr_process->getArrivalTime();
-        int waitingTime = turnaroundTime - curr_process->getBurstTime();
+        int turnaround = currentTime - curr_process->getArrivalTime();
+        int waiting    = turnaround  - curr_process->getBurstTime();
+        totalTurnaroundTime += turnaround;
+        totalWaitingTime    += waiting;
+        completedProcesses++;
 
-        totalTurnaroundTime += turnaroundTime;
-        totalWaitingTime += waitingTime;
-        com_process++;
-
-        averageTurnaroundTime = totalTurnaroundTime / processesList.size();
-        averageWaitingTime = totalWaitingTime / processesList.size();
+        averageTurnaroundTime = totalTurnaroundTime / completedProcesses;
+        averageWaitingTime    = totalWaitingTime    / completedProcesses;
 
         delete curr_process;
         curr_process = nullptr;
     }
 
-    if (com_process == processesList.size() && ready_queue.empty() && incomingProcesses.empty() && curr_process == nullptr) {
-        return false;
-    }
-
-    return true;
+    bool anyPending = (int)processesList.size() > completedProcesses;
+    return anyPending || !ready_queue.empty() || curr_process != nullptr;
 }
 
-
-struct compare {
-    bool operator()(const process& a, const process& b) const {
-        if (a.getBurstTime()==b.getBurstTime()) {
-            return a.getArrivalTime()>b.getArrivalTime();
-        }
-        return a.getBurstTime()>b.getBurstTime();
-    }
-};
-bool comp_arrival_time(const process& a, const process& b) {
-    return a.getArrivalTime() < b.getArrivalTime();
-}
+// FIX (Bug 6): run() now has a proper closing brace.
+// FIX (Bug 5): comp_arrival_time lambda defined inline — no duplicate symbol.
 void SJF::run() {
-    std::sort(processesList.begin(), processesList.end(), comp_arrival_time);
-    std::priority_queue<process, std::vector<process>, compare> ready_queue;
-    int curr_index=0;
-    int n=processesList.size();
-    double totalTurnaroundTime=0,totalWaitingTime=0;
-    int com_process =0;
-    while (com_process < n) {
-        while (curr_index<n && processesList[curr_index].getArrivalTime()<=currentTime) {
-            ready_queue.push(processesList[curr_index]);
-            curr_index++;
-        }
-        if (ready_queue.empty()) {
-            currentTime++;
-            continue;
-        }
-        process curr_process=ready_queue.top();
-        ready_queue.pop();
-        int start_time=currentTime;
-        int end_time=start_time+ curr_process.getBurstTime();
-        currentTime=end_time;
-        com_process++;
-        timeline.push_back(event(curr_process.getId(),start_time,end_time));
-        int turnaroundTime = end_time - curr_process.getArrivalTime();
-        int waitingTime = turnaroundTime - curr_process.getBurstTime();
-        totalTurnaroundTime += turnaroundTime;
-        totalWaitingTime += waitingTime;
+    std::sort(processesList.begin(), processesList.end(),
+              [](const process& a, const process& b) {
+                  return a.getArrivalTime() < b.getArrivalTime();
+              });
 
-    }
-    if (n > 0) {
-        averageTurnaroundTime = totalTurnaroundTime / n;
-        averageWaitingTime = totalWaitingTime / n;
+    // Also drain any dynamic processes added before run() was called.
+    while (!incomingProcesses.empty()) {
+        processesList.push_back(incomingProcesses.front());
+        incomingProcesses.pop();
     }
 
+    // Use a local priority queue for the batch simulation.
+    struct Cmp {
+        bool operator()(const process& a, const process& b) const {
+            if (a.getBurstTime() == b.getBurstTime())
+                return a.getArrivalTime() > b.getArrivalTime();
+            return a.getBurstTime() > b.getBurstTime();
+        }
+    };
+    std::priority_queue<process, std::vector<process>, Cmp> pq;
 
+    int idx = 0;
+    int n   = (int)processesList.size();
 
+    while (completedProcesses < n) {
+        while (idx < n && processesList[idx].getArrivalTime() <= currentTime)
+            pq.push(processesList[idx++]);
 
+        if (pq.empty()) { currentTime++; continue; }
 
+        process curr = pq.top(); pq.pop();
+        int start    = currentTime;
+        currentTime += curr.getBurstTime();
 
+        timeline.push_back(event(curr.getId(), start, currentTime));
 
+        int turnaround = currentTime - curr.getArrivalTime();
+        int waiting    = turnaround  - curr.getBurstTime();
+        totalTurnaroundTime += turnaround;
+        totalWaitingTime    += waiting;
+        completedProcesses++;
+    }
 
+    if (completedProcesses > 0) {
+        averageTurnaroundTime = totalTurnaroundTime / completedProcesses;
+        averageWaitingTime    = totalWaitingTime    / completedProcesses;
+    }
+} // FIX (Bug 6): this brace was missing in the original.
 
+// ─── Preemptive SJF (SRTF) ───────────────────────────────────────────────
 
+bool SRTF::tick() {
+    // Admit processes that have arrived and push their pointer into the ready queue.
+    for (process& p : processesList) {
+        if (p.getArrivalTime() == currentTime && p.getRemainingTime() == p.getBurstTime())
+            ready_queue.push(&p);
+    }
+    while (!incomingProcesses.empty()) {
+        processesList.push_back(incomingProcesses.front());
+        incomingProcesses.pop();
+        ready_queue.push(&processesList.back());
+    }
 
+    // Preemption: if the ready queue has a shorter remaining time, switch.
+    if (!ready_queue.empty()) {
+        process* shortest = ready_queue.top();
+        if (curr_process == nullptr || shortest->getRemainingTime() < curr_process->getRemainingTime()) {
+            if (curr_process != nullptr) {
+                // Record the partial block before preempting.
+                timeline.push_back(event(curr_process->getId(), block_start_time, currentTime));
+                ready_queue.push(curr_process);
+            }
+            curr_process     = ready_queue.top();
+            block_start_time = currentTime;
+            ready_queue.pop();
+        }
+    }
 
+    if (curr_process != nullptr) {
+        curr_process->setRemainingTime(curr_process->getRemainingTime() - 1);
+
+        if (curr_process->getRemainingTime() == 0) {
+            timeline.push_back(event(curr_process->getId(), block_start_time, currentTime + 1));
+
+            int turnaround = (currentTime + 1) - curr_process->getArrivalTime();
+            int waiting    = turnaround - curr_process->getBurstTime();
+            totalTurnaroundTime += turnaround;
+            totalWaitingTime    += waiting;
+            completedProcesses++;
+            averageTurnaroundTime = totalTurnaroundTime / completedProcesses;
+            averageWaitingTime    = totalWaitingTime    / completedProcesses;
+
+            curr_process = nullptr;
+        }
+    }
+
+    currentTime++;
+    bool anyPending = (int)processesList.size() > completedProcesses;
+    return anyPending || !ready_queue.empty() || curr_process != nullptr;
+}
+
+void SRTF::run() {
+    // SRTF batch mode: simulate tick-by-tick but without the 1-second delay.
+    while (tick()) { /* run to completion */ }
+}

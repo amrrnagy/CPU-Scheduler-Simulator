@@ -1,60 +1,85 @@
-#include <queue>
 #include "FCFS.h"
 #include <algorithm>
 
-bool compare (const process & a , const process & b) {
-    return a.getArrivalTime()<b.getArrivalTime();
+bool FCFS::tick() {
+    // Drain any dynamically added processes into the ready queue.
+    while (!incomingProcesses.empty()) {
+        processesList.push_back(incomingProcesses.front());
+        incomingProcesses.pop();
+    }
+
+    // Admit processes whose arrival time has been reached.
+    for (process& p : processesList) {
+        if (p.getArrivalTime() == currentTime && p.getRemainingTime() == p.getBurstTime()) {
+            ready_queue.push(&p);
+        }
+    }
+
+    // Pick the next process if the CPU is idle.
+    if (current_process == nullptr && !ready_queue.empty()) {
+        current_process  = ready_queue.front();
+        ready_queue.pop();
+        block_start_time = currentTime;
+    }
+
+    // Execute one time unit.
+    if (current_process != nullptr) {
+        current_process->setRemainingTime(current_process->getRemainingTime() - 1);
+
+        if (current_process->getRemainingTime() <= 0) {
+            // FIX (Bug 3): event constructor is event(id, start, end) — not {time, id, string}.
+            timeline.push_back(event(current_process->getId(), block_start_time, currentTime + 1));
+
+            int turnaround = (currentTime + 1) - current_process->getArrivalTime();
+            int waiting    = turnaround - current_process->getBurstTime();
+            totalTurnaroundTime += turnaround;
+            totalWaitingTime    += waiting;
+            completedProcesses++;
+
+            if (completedProcesses > 0) {
+                averageTurnaroundTime = totalTurnaroundTime / completedProcesses;
+                averageWaitingTime    = totalWaitingTime    / completedProcesses;
+            }
+
+            current_process = nullptr;
+        }
+    }
+
+    currentTime++;
+
+    bool pendingArrivals = false;
+    for (const process& p : processesList) {
+        if (p.getArrivalTime() > currentTime) { pendingArrivals = true; break; }
+    }
+
+    return (pendingArrivals || !ready_queue.empty() || current_process != nullptr);
 }
 
-bool FCFS::tick() {
-    if (! is_sorted) {
-        std::sort(processesList.begin(), processesList.end(), compare);
-        offline_count=processesList.size();
-        is_sorted=true;
+void FCFS::run() {
+    // Sort by arrival time for non-live batch mode.
+    std::sort(processesList.begin(), processesList.end(),
+              [](const process& a, const process& b) {
+                  return a.getArrivalTime() < b.getArrivalTime();
+              });
+
+    for (process& p : processesList) {
+        if (currentTime < p.getArrivalTime())
+            currentTime = p.getArrivalTime();   // skip idle gap
+
+        int start = currentTime;
+        currentTime += p.getBurstTime();
+
+        timeline.push_back(event(p.getId(), start, currentTime));
+
+        int turnaround = currentTime - p.getArrivalTime();
+        int waiting    = turnaround  - p.getBurstTime();
+        totalTurnaroundTime += turnaround;
+        totalWaitingTime    += waiting;
+        completedProcesses++;
     }
 
-    while (curr_index < offline_count && processesList[curr_index].getArrivalTime() <= currentTime) {
-        ready_queue.push(processesList[curr_index]);
-        curr_index++;
+    if (completedProcesses > 0) {
+        averageTurnaroundTime = totalTurnaroundTime / completedProcesses;
+        averageWaitingTime    = totalWaitingTime    / completedProcesses;
     }
-
-    while (!incomingProcesses.empty()) {
-        process p =incomingProcesses.front();
-        incomingProcesses.pop();
-        processesList.push_back(p);
-        ready_queue.push(p);
-    }
-    if (curr_process == nullptr) {
-        if (ready_queue.empty()) {
-            currentTime++;
-            return true;
-        }
-        curr_process = new process(ready_queue.front());
-        ready_queue.pop();
-        block_start_time=currentTime;
-    }
-    curr_process ->setRemainingTime(curr_process->getRemainingTime()-1);
-    currentTime ++;
-
-    if (curr_process->getRemainingTime() == 0) {
-        timeline.push_back(event(curr_process->getId(),block_start_time,currentTime));
-        int turnaroundTime = currentTime - curr_process->getArrivalTime();
-        int waitingTime = turnaroundTime - curr_process->getBurstTime();
-
-        totalTurnaroundTime += turnaroundTime;
-        totalWaitingTime += waitingTime;
-        com_process++;
-
-        averageTurnaroundTime = totalTurnaroundTime / processesList.size();
-        averageWaitingTime = totalWaitingTime / processesList.size();
-
-        delete curr_process;
-        curr_process = nullptr;
-    }
-
-
-    if (com_process == processesList.size() && ready_queue.empty() && incomingProcesses.empty() && curr_process == nullptr) {
-        return false;
-    }
-    return true;
 }

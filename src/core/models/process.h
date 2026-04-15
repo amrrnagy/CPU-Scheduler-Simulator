@@ -9,27 +9,15 @@ class process {
     int remainingTime;
 
 public:
-    process (const int ID, const int arr, const int burst, const int priority, int rem)
-        :id(ID) , arrivalTime(arr) , burstTime(burst) , priority(priority) , remainingTime(rem) {}
+    process(const int ID, const int arr, const int burst, const int prio, int rem)
+        : id(ID), arrivalTime(arr), burstTime(burst), priority(prio), remainingTime(rem) {}
 
-        bool operator<(const process & other) const {
-            return this->arrivalTime > other.arrivalTime;
-        }
-
+    int getId()            const { return id;            }
+    int getArrivalTime()   const { return arrivalTime;   }
+    int getBurstTime()     const { return burstTime;     }
+    int getPriority()      const { return priority;      }
+    int getRemainingTime() const { return remainingTime; }
     void setRemainingTime(const int t) { remainingTime = t; }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif //BACKEND_PROCESS_H
