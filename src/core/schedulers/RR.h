@@ -16,8 +16,8 @@ public:
 
     bool tick() override;
     void run()  override;
-    // FIX (Bug 9)
-    int getCurrentProcessId() const override {
+
+    [[nodiscard]] int getCurrentProcessId() const override {
         return curr_process ? curr_process->getId() : -1;
     }
 };

@@ -44,7 +44,7 @@ bool SJF::tick() {
     currentTime++;
 
     if (curr_process->getRemainingTime() == 0) {
-        timeline.push_back(event(curr_process->getId(), block_start_time, currentTime));
+        timeline.emplace_back(curr_process->getId(), block_start_time, currentTime);
 
         int turnaround = currentTime - curr_process->getArrivalTime();
         int waiting    = turnaround  - curr_process->getBurstTime();
@@ -59,7 +59,7 @@ bool SJF::tick() {
         curr_process = nullptr;
     }
 
-    bool anyPending = (int)processesList.size() > completedProcesses;
+    bool anyPending = static_cast<int>(processesList.size()) > completedProcesses;
     return anyPending || !ready_queue.empty() || curr_process != nullptr;
 }
 
@@ -88,7 +88,7 @@ void SJF::run() {
     std::priority_queue<process, std::vector<process>, Cmp> pq;
 
     int idx = 0;
-    int n   = (int)processesList.size();
+    int n   = static_cast<int>(processesList.size());
 
     while (completedProcesses < n) {
         while (idx < n && processesList[idx].getArrivalTime() <= currentTime)
@@ -100,7 +100,7 @@ void SJF::run() {
         int start    = currentTime;
         currentTime += curr.getBurstTime();
 
-        timeline.push_back(event(curr.getId(), start, currentTime));
+        timeline.emplace_back(curr.getId(), start, currentTime);
 
         int turnaround = currentTime - curr.getArrivalTime();
         int waiting    = turnaround  - curr.getBurstTime();
@@ -135,7 +135,7 @@ bool SRTF::tick() {
         if (curr_process == nullptr || shortest->getRemainingTime() < curr_process->getRemainingTime()) {
             if (curr_process != nullptr) {
                 // Record the partial block before preempting.
-                timeline.push_back(event(curr_process->getId(), block_start_time, currentTime));
+                timeline.emplace_back(curr_process->getId(), block_start_time, currentTime);
                 ready_queue.push(curr_process);
             }
             curr_process     = ready_queue.top();
@@ -148,7 +148,7 @@ bool SRTF::tick() {
         curr_process->setRemainingTime(curr_process->getRemainingTime() - 1);
 
         if (curr_process->getRemainingTime() == 0) {
-            timeline.push_back(event(curr_process->getId(), block_start_time, currentTime + 1));
+            timeline.emplace_back(curr_process->getId(), block_start_time, currentTime + 1);
 
             int turnaround = (currentTime + 1) - curr_process->getArrivalTime();
             int waiting    = turnaround - curr_process->getBurstTime();
@@ -163,7 +163,7 @@ bool SRTF::tick() {
     }
 
     currentTime++;
-    bool anyPending = (int)processesList.size() > completedProcesses;
+    bool anyPending = static_cast<int>(processesList.size()) > completedProcesses;
     return anyPending || !ready_queue.empty() || curr_process != nullptr;
 }
 

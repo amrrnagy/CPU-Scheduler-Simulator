@@ -2,7 +2,6 @@
 #include "ui_MainWindow.h"
 #include <QMessageBox>
 #include <QGraphicsScene>
-#include <QGraphicsRectItem>
 #include <QGraphicsTextItem>
 #include <algorithm>
 
@@ -20,9 +19,8 @@ MainWindow::MainWindow(QWidget *parent)
     currentTime         = 0;
     isSimulationRunning = false;
     activeSimulator     = nullptr;
-    ganttX              = 0;
 
-    QGraphicsScene *scene = new QGraphicsScene(this);
+    auto *scene = new QGraphicsScene(this);
     ui->view_Gantt->setScene(scene);
     ui->view_Gantt->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
@@ -43,8 +41,7 @@ MainWindow::~MainWindow()
 
 // ── UI Event Handlers ────────────────────────────────────────────────────
 
-void MainWindow::on_combo_Scheduler_currentIndexChanged(int /*index*/)
-{
+void MainWindow::on_combo_Scheduler_currentIndexChanged(int /*index*/) const {
     QString algorithm = ui->combo_Scheduler->currentText();
 
     ui->label_Quantum->setVisible(false);
@@ -63,20 +60,31 @@ void MainWindow::on_combo_Scheduler_currentIndexChanged(int /*index*/)
 
 void MainWindow::on_btn_Add_clicked()
 {
-    if (isSimulationRunning) {
+    if (isSimulationRunning && ui->radio_Static->isChecked()) {
         QMessageBox::warning(this, "Warning", "Cannot add processes while simulation is running live!");
         return;
     }
 
     Process p;
     p.pid           = nextPid;
-    p.arrivalTime   = ui->input_Arrival->value();
     p.burstTime     = ui->input_Burst->value();
     p.remainingTime = p.burstTime;
     p.priority      = ui->input_Priority->isVisible() ? ui->input_Priority->value() : 0;
 
+    // Sync arrival time with the live clock if running dynamically
+    if (isSimulationRunning && ui->radio_Dynamic->isChecked()) {
+        p.arrivalTime = currentTime;
+    } else {
+        p.arrivalTime = ui->input_Arrival->value();
+    }
+
     processList.push_back(p);
     nextPid++;
+
+    if (isSimulationRunning && ui->radio_Dynamic->isChecked() && activeSimulator) {
+        activeSimulator->addProcess(
+            ::process(p.pid, p.arrivalTime, p.burstTime, p.priority, p.remainingTime));
+    }
 
     ui->input_Arrival->setValue(0);
     ui->input_Burst->setValue(1);
@@ -97,9 +105,18 @@ void MainWindow::on_btn_Reset_clicked()
     processList.clear();
     nextPid     = 1;
     currentTime = 0;
-    ganttX      = 0;
 
     ui->btn_Add->setEnabled(true);
+
+    // Restore Arrival Time inputs!
+    ui->input_Arrival->setVisible(true);
+    ui->label_Arrival->setVisible(true);
+
+    ui->groupBox_Scheduler->setEnabled(true);
+    ui->groupBox_Mode->setEnabled(true);
+    ui->btn_RunLive->setVisible(true);
+    ui->btn_RunInstant->setVisible(!ui->radio_Dynamic->isChecked());
+
     ui->label_Time->setText("Current Time: 0s");
     ui->label_Wait->setText("Avg Waiting Time: 0.00");
     ui->label_Turnaround->setText("Avg Turnaround Time: 0.00");
@@ -110,8 +127,7 @@ void MainWindow::on_btn_Reset_clicked()
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-void MainWindow::updateProcessTable()
-{
+void MainWindow::updateProcessTable() const {
     ui->table_Processes->setRowCount(static_cast<int>(processList.size()));
 
     for (int i = 0; i < static_cast<int>(processList.size()); ++i) {
@@ -143,13 +159,82 @@ static SchedulerType algorithmToType(const QString& algorithm) {
     return SchedulerType::FCFS;
 }
 
-// Draw a single Gantt block at the current ganttX position.
-static void addGanttBlock(QGraphicsScene* scene, int x, int pid, int blockW = 30, int blockH = 50) {
-    QColor color = (pid == -1) ? Qt::lightGray : QColor::fromHsv((pid * 50) % 360, 200, 200);
-    scene->addRect(x, 0, blockW, blockH, QPen(Qt::black), QBrush(color));
-    QString label = (pid == -1) ? "IDLE" : ("P" + QString::number(pid));
-    QGraphicsTextItem* text = scene->addText(label);
-    text->setPos(x + (pid == -1 ? 2 : 5), 15);
+// THE NEW MASTER RENDERING FUNCTION
+void MainWindow::drawGanttChart() const {
+    ui->view_Gantt->scene()->clear();
+    QGraphicsScene* scene = ui->view_Gantt->scene();
+    constexpr int blockH = 50;
+
+    if (!activeSimulator || currentTime == 0) return;
+
+    // 1. Extract historical timeline
+    auto timeline = activeSimulator->getTimeline();
+    std::sort(timeline.begin(), timeline.end(),
+              [](const ::event& a, const ::event& b){ return a.getStartTime() < b.getStartTime(); });
+
+    // 2. Build mathematical segments mapping out exactly who ran when
+    struct Segment { int pid, start, end; };
+    std::vector<Segment> rawSegments;
+    int trackTime = 0;
+
+    for (const ::event& e : timeline) {
+        if (e.getStartTime() >= currentTime) break;
+
+        // Gap detected
+        if (trackTime < e.getStartTime()) {
+            rawSegments.push_back({-1, trackTime, e.getStartTime()});
+            trackTime = e.getStartTime();
+        }
+
+        // Process detected
+        int endT = std::min(e.getEndTime(), currentTime);
+        if (endT > trackTime) {
+            rawSegments.push_back({e.getProcessId(), trackTime, endT});
+            trackTime = endT;
+        }
+    }
+
+    // Fill the final stretch up to the current live time
+    if (trackTime < currentTime) {
+        rawSegments.push_back({activeSimulator->getCurrentProcessId(), trackTime, currentTime});
+    }
+
+    // 3. MERGE consecutive segments that have the same Process ID
+    std::vector<Segment> mergedSegments;
+    for (const auto& seg : rawSegments) {
+        if (!mergedSegments.empty() && mergedSegments.back().pid == seg.pid && mergedSegments.back().end == seg.start) {
+            mergedSegments.back().end = seg.end; // Stretch the previous block
+        } else {
+            mergedSegments.push_back(seg);
+        }
+    }
+
+    // 4. Draw the merged blocks beautifully
+    int drawX = 0;
+    for (const auto& m : mergedSegments) {
+        constexpr int blockW = 30;
+        int duration = m.end - m.start;
+        int rectWidth = duration * blockW;
+
+        QColor color = (m.pid == -1) ? Qt::lightGray : QColor::fromHsv((m.pid * 50) % 360, 200, 200);
+        scene->addRect(drawX, 0, rectWidth, blockH, QPen(Qt::black), QBrush(color));
+
+        // Center the P# Label
+        QString label = (m.pid == -1) ? "IDLE" : ("P" + QString::number(m.pid));
+        QGraphicsTextItem* text = scene->addText(label);
+        int textWidth = text->boundingRect().width();
+        text->setPos(drawX + (rectWidth - textWidth) / 2, 15);
+
+        // Draw Start Time at the left edge
+        QGraphicsTextItem* tStart = scene->addText(QString::number(m.start));
+        tStart->setPos(drawX - 5, blockH + 2);
+
+        drawX += rectWidth;
+    }
+
+    // Draw the final End Time at the far right edge
+    QGraphicsTextItem* tEnd = scene->addText(QString::number(currentTime));
+    tEnd->setPos(drawX - 5, blockH + 2);
 }
 
 // ── Live Mode ─────────────────────────────────────────────────────────────
@@ -162,16 +247,26 @@ void MainWindow::on_btn_RunLive_clicked()
     }
 
     isSimulationRunning = true;
-    ui->btn_Add->setEnabled(false);
 
-    std::vector<process> backendList;
+    if (ui->radio_Static->isChecked()) {
+        ui->btn_Add->setEnabled(false);
+    }
+
+    ui->input_Arrival->setVisible(false);
+    ui->label_Arrival->setVisible(false);
+
+    ui->groupBox_Scheduler->setEnabled(false);
+    ui->groupBox_Mode->setEnabled(false);
+    ui->btn_RunLive->setVisible(false);
+    ui->btn_RunInstant->setVisible(false);
+
+    std::deque<process> backendList;
     for (const auto& p : processList)
         backendList.emplace_back(p.pid, p.arrivalTime, p.burstTime, p.priority, p.remainingTime);
 
     std::sort(backendList.begin(), backendList.end(),
               [](const process& a, const process& b){ return a.getArrivalTime() < b.getArrivalTime(); });
 
-    ganttX      = 0;
     currentTime = 0;
     ui->view_Gantt->scene()->clear();
 
@@ -183,7 +278,6 @@ void MainWindow::on_btn_RunLive_clicked()
     activeSimulator = new simulator(algorithmToType(algorithm), quantum);
     activeSimulator->loadProcesses(backendList);
 
-    // FIX (Bug 2): on_tick_callback is now public — direct assignment works.
     activeSimulator->on_tick_callback = [this]() {
         QMetaObject::invokeMethod(this, "onLiveTimerTick", Qt::QueuedConnection);
     };
@@ -195,27 +289,23 @@ void MainWindow::onLiveTimerTick()
 {
     if (!activeSimulator) return;
 
-    QGraphicsScene* scene = ui->view_Gantt->scene();
-
-    // Draw who was running during the tick that just completed.
-    int runningId = activeSimulator->getCurrentProcessId();
-    addGanttBlock(scene, ganttX, runningId);
-    ganttX      += 30;
-    currentTime++;
+    currentTime++; // Time advances
+    drawGanttChart(); // Re-render the entire merged chart up to the new time
 
     ui->label_Time->setText("Current Time: " + QString::number(currentTime) + "s");
+    ui->label_Wait->setText("Avg Waiting Time: " + QString::number(activeSimulator->getAvgWaitingTime(), 'f', 2));
+    ui->label_Turnaround->setText("Avg Turnaround Time: " + QString::number(activeSimulator->getAvgTurnaroundTime(), 'f', 2));
 
-    // FIX (Bug 8): Update avg time labels on every tick so they're always current.
-    ui->label_Wait->setText(
-        "Avg Waiting Time: " + QString::number(activeSimulator->getAvgWaitingTime(), 'f', 2));
-    ui->label_Turnaround->setText(
-        "Avg Turnaround Time: " + QString::number(activeSimulator->getAvgTurnaroundTime(), 'f', 2));
-
-    // FIX (Bug 7): was checking e.type == "FINISHED" which doesn't exist on event.
-    // Just check isRunning() — the background thread sets it to false when done.
     if (!activeSimulator->isRunning()) {
         isSimulationRunning = false;
         ui->btn_Add->setEnabled(true);
+        ui->input_Arrival->setVisible(true);
+        ui->label_Arrival->setVisible(true);
+        ui->groupBox_Scheduler->setEnabled(true);
+        ui->groupBox_Mode->setEnabled(true);
+        ui->btn_RunLive->setVisible(true);
+        ui->btn_RunInstant->setVisible(true);
+
         QMessageBox::information(this, "Finished", "Live Simulation Complete!");
     }
 }
@@ -235,7 +325,7 @@ void MainWindow::on_btn_RunInstant_clicked()
         ui->btn_Add->setEnabled(true);
     }
 
-    std::vector<process> backendList;
+    std::deque<process> backendList;
     for (const auto& p : processList)
         backendList.emplace_back(p.pid, p.arrivalTime, p.burstTime, p.priority, p.remainingTime);
 
@@ -249,61 +339,28 @@ void MainWindow::on_btn_RunInstant_clicked()
 
     activeSimulator = new simulator(algorithmToType(algorithm), quantum);
     activeSimulator->loadProcesses(backendList);
+
+    // Process backend logic instantly
     activeSimulator->runBatch();
 
-    // ── Draw Gantt chart ──────────────────────────────────────────────────
-    // FIX (Bug 5 & 6): The old code used e.time / e.type / e.process_id which
-    // don't exist on the event class. The event class has getStartTime(),
-    // getEndTime(), getProcessId(). We draw one block per timeline segment
-    // directly — no need to reconstruct second-by-second from type strings.
-
-    ui->view_Gantt->scene()->clear();
-    QGraphicsScene* scene = ui->view_Gantt->scene();
-    const int blockW = 30;
-    const int blockH = 50;
-
-    const auto timeline = activeSimulator->getTimeline();
-
-    // Sort timeline events by start time so the chart is left-to-right.
-    std::vector<::event> sorted = timeline;
-    std::sort(sorted.begin(), sorted.end(),
-              [](const ::event& a, const ::event& b){ return a.getStartTime() < b.getStartTime(); });
-
-    // Fill idle gaps and draw each event block.
-    int drawX   = 0;
-    int prevEnd = 0;
-
-    for (const ::event& e : sorted) {
-        // Draw idle gap if there's a hole before this block.
-        int idleStart = prevEnd;
-        while (idleStart < e.getStartTime()) {
-            addGanttBlock(scene, drawX, -1, blockW, blockH);
-            drawX++;          // 1 unit = 1 block-width worth of X
-            idleStart++;
-        }
-        // Draw the process block (one visual block per time unit it ran).
-        for (int t = e.getStartTime(); t < e.getEndTime(); ++t) {
-            addGanttBlock(scene, drawX * blockW, e.getProcessId(), blockW, blockH);
-            drawX++;
-        }
-        prevEnd = e.getEndTime();
+    // Find the total time needed for the rendering logic
+    auto timeline = activeSimulator->getTimeline();
+    int maxTime = 0;
+    for (const ::event& e : timeline) {
+        if (e.getEndTime() > maxTime) maxTime = e.getEndTime();
     }
+    currentTime = maxTime;
 
-    // Draw time labels along the bottom
-    int totalTime = prevEnd;
-    for (int t = 0; t <= totalTime; ++t) {
-        QGraphicsTextItem* label = scene->addText(QString::number(t));
-        label->setPos(t * blockW - 4, blockH + 2);
-    }
+    // Use our new unified, merged drawing function!
+    drawGanttChart();
 
-    currentTime = totalTime;
     ui->label_Time->setText("Total Time: " + QString::number(currentTime) + "s");
-
-    // FIX (Bug 8): Update avg time labels — they were never set after instant run.
-    ui->label_Wait->setText(
-        "Avg Waiting Time: " + QString::number(activeSimulator->getAvgWaitingTime(), 'f', 2));
-    ui->label_Turnaround->setText(
-        "Avg Turnaround Time: " + QString::number(activeSimulator->getAvgTurnaroundTime(), 'f', 2));
+    ui->label_Wait->setText("Avg Waiting Time: " + QString::number(activeSimulator->getAvgWaitingTime(), 'f', 2));
+    ui->label_Turnaround->setText("Avg Turnaround Time: " + QString::number(activeSimulator->getAvgTurnaroundTime(), 'f', 2));
 
     QMessageBox::information(this, "Finished", "Simulation Complete!");
+}
+
+void MainWindow::on_radio_Dynamic_toggled(bool checked) const {
+    ui->btn_RunInstant->setVisible(!checked);
 }

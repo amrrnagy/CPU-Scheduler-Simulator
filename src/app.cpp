@@ -1,5 +1,5 @@
 #include <QApplication>
-#include "gui/MainWindow.h" // Make sure this path points to your actual header
+#include "gui/MainWindow.h"
 
 int main(int argc, char *argv[])
 {

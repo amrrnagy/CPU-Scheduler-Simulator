@@ -16,7 +16,7 @@ bool RR::tick() {
     // If the current process has exhausted its quantum (and isn't finished),
     // push it back to the tail of the ready queue.
     if (curr_process != nullptr && quantum_counter >= quantum) {
-        timeline.push_back(event(curr_process->getId(), block_start_time, currentTime));
+        timeline.emplace_back(curr_process->getId(), block_start_time, currentTime);
         if (curr_process->getRemainingTime() > 0)
             ready_queue.push(curr_process);
         curr_process    = nullptr;
@@ -38,10 +38,10 @@ bool RR::tick() {
 
         if (curr_process->getRemainingTime() == 0) {
             // Process finished before the quantum expired.
-            timeline.push_back(event(curr_process->getId(), block_start_time, currentTime + 1));
+            timeline.emplace_back(curr_process->getId(), block_start_time, currentTime + 1);
 
-            int turnaround = (currentTime + 1) - curr_process->getArrivalTime();
-            int waiting    = turnaround - curr_process->getBurstTime();
+            const int turnaround = (currentTime + 1) - curr_process->getArrivalTime();
+            const int waiting    = turnaround - curr_process->getBurstTime();
             totalTurnaroundTime += turnaround;
             totalWaitingTime    += waiting;
             completedProcesses++;
@@ -54,7 +54,7 @@ bool RR::tick() {
     }
 
     currentTime++;
-    bool anyPending = (int)processesList.size() > completedProcesses;
+    const bool anyPending = static_cast<int>(processesList.size()) > completedProcesses;
     return anyPending || !ready_queue.empty() || curr_process != nullptr;
 }
 

@@ -27,7 +27,7 @@ simulator::~simulator() {
     stop();
 }
 
-void simulator::loadProcesses(const std::vector<process>& list) {
+void simulator::loadProcesses(const std::deque<process>& list) const {
     sched->loadProcesses(list);
 }
 
@@ -69,7 +69,7 @@ void simulator::stop() {
 void simulator::pause()  { paused = true;  }
 void simulator::resume() { paused = false; }
 
-void simulator::runBatch() {
+void simulator::runBatch() const {
     // Batch mode: run to completion instantly.
     sched->run();
     if (on_tick_callback) on_tick_callback();

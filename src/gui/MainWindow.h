@@ -11,19 +11,18 @@
 #include <QString>
 
 #include "../core/simulator.h"
-#include "../core/models/process.h"
 
 // ==========================================
 // 1. Core Data Structure
 // ==========================================
 struct Process {
-    int pid;
-    int arrivalTime;
-    int burstTime;
-    int priority;
+    int pid{};
+    int arrivalTime{};
+    int burstTime{};
+    int priority{};
 
     // Variables that change during execution
-    int remainingTime;
+    int remainingTime{};
 
     // Metrics calculated at the end
     int completionTime = 0;
@@ -58,7 +57,8 @@ private slots:
     void on_btn_RunLive_clicked();
     void on_btn_RunInstant_clicked();
     void on_btn_Reset_clicked();
-    void on_combo_Scheduler_currentIndexChanged(int index);
+    void on_combo_Scheduler_currentIndexChanged(int index) const;
+    void on_radio_Dynamic_toggled(bool checked) const;
 
 private:
     Ui::MainWindow *ui;
@@ -73,13 +73,12 @@ private:
     bool isSimulationRunning;         // Prevents double-clicks while running
 
     simulator* activeSimulator = nullptr; // Encapsulates the backend logic
-    int ganttX;                       // X coordinate for drawing the Gantt chart
+    int ganttX{};                       // X coordinate for drawing the Gantt chart
 
     // ==========================================
     // 6. Helper Functions
     // ==========================================
-    void updateProcessTable();
-    void drawGanttChart();
-    void calculateMetrics();
+    void updateProcessTable() const;
+    void drawGanttChart() const;
 };
 #endif //CPU_SCHEDULER_SIMULATOR_MAINWINDOW_H

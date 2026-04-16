@@ -5,12 +5,16 @@
 #include "../models/process.h"
 #include <vector>
 #include <queue>
+#include <deque>
 
 class scheduler {
 protected:
     std::vector<event>   timeline;
-    std::vector<process> processesList;
+    std::deque<process> processesList;
     std::queue<process>  incomingProcesses;
+
+    int incomingIndex = 0;
+    int internalTime = 0;
 
     int    currentTime           = 0;
     int    completedProcesses    = 0;
@@ -34,14 +38,16 @@ public:
     [[nodiscard]] double             getAvgTurnaroundTime() const { return averageTurnaroundTime; }
     [[nodiscard]] int                getCurrentTime()       const { return currentTime;           }
 
-    void loadProcesses(const std::vector<process>& list) {
+    void loadProcesses(const std::deque<process>& list) {
         processesList = list;
+        internalTime = 0;
+        incomingIndex = 0;
     }
 
     // FIX (Bug 3): Was declared but never defined — caused a linker error.
     // Default returns -1 (idle). Derived classes override to return their
     // specific current_process pointer's id.
-    virtual int getCurrentProcessId() const { return -1; }
+    [[nodiscard]] virtual int getCurrentProcessId() const { return -1; }
 };
 
 #endif //BACKEND_SCHEDULER_H

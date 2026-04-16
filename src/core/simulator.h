@@ -11,7 +11,6 @@
 #include <functional>
 #include <thread>
 #include <atomic>
-#include <chrono>
 #include <mutex>
 
 enum class SchedulerType {
@@ -37,7 +36,7 @@ public:
     explicit simulator(SchedulerType type, int rr_quantum = 2);
     ~simulator();
 
-    void loadProcesses(const std::vector<process>& list);
+    void loadProcesses(const std::deque<process> &list) const;
     void addProcess(const process& p);
 
     void setOnTickCallback(std::function<void()> cb) { on_tick_callback = std::move(cb); }
@@ -46,17 +45,17 @@ public:
     void stop();
     void pause();
     void resume();
-    bool isRunning() const { return running.load(); }
+    [[nodiscard]] bool isRunning() const { return running.load(); }
 
-    void runBatch();
+    void runBatch() const;
 
     // FIX (Bug 1): getTimeline() was declared twice here — duplicate causes a compile error.
     // Only one declaration kept.
-    std::vector<event> getTimeline()         const { return sched ? sched->getTimeline()         : std::vector<event>{}; }
-    double             getAvgWaitingTime()   const { return sched ? sched->getAvgWaitingTime()   : 0.0; }
-    double             getAvgTurnaroundTime()const { return sched ? sched->getAvgTurnaroundTime(): 0.0; }
-    int                getCurrentTime()      const { return sched ? sched->getCurrentTime()      : 0;   }
-    int                getCurrentProcessId() const { return sched ? sched->getCurrentProcessId() : -1;  }
+    [[nodiscard]] std::vector<event> getTimeline()         const { return sched ? sched->getTimeline()         : std::vector<event>{}; }
+    [[nodiscard]] double             getAvgWaitingTime()   const { return sched ? sched->getAvgWaitingTime()   : 0.0; }
+    [[nodiscard]] double             getAvgTurnaroundTime()const { return sched ? sched->getAvgTurnaroundTime(): 0.0; }
+    [[nodiscard]] int                getCurrentTime()      const { return sched ? sched->getCurrentTime()      : 0;   }
+    [[nodiscard]] int                getCurrentProcessId() const { return sched ? sched->getCurrentProcessId() : -1;  }
 };
 
 #endif //CPUSCHEDULERSIMULATOR_SIMULATOR_H

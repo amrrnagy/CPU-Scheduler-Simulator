@@ -14,8 +14,7 @@ public:
     bool tick() override;
     void run()  override;
 
-    // FIX (Bug 4): must be const to match base signature; null-checked in .cpp
-    int getCurrentProcessId() const override;
+    [[nodiscard]] int getCurrentProcessId() const override;
 };
 
 #endif //BACKEND_FCFS_H
