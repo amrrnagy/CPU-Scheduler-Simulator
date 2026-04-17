@@ -36,6 +36,9 @@ add_executable(
         core/schedulers/SJF.h
         core/simulator.cpp
         core/simulator.h
+
+        app_icon.ico
+        resources.qrc
 )
 
 # 2. LINK THE LIBRARIES AFTER
