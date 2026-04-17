@@ -5,7 +5,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    // Create and show our beautiful UI
+    // Create and show the UI
     MainWindow w;
     w.show();
 
