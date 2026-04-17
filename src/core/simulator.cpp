@@ -57,8 +57,8 @@ SimSnapshot simulator::getSnapshot() {
     SimSnapshot snap;
     if (!sched) return snap;
 
-    snap.timeline          = sched->getTimeline();        // safe: lock held
-    snap.currentProcessId  = sched->getCurrentProcessId();// safe: lock held
+    snap.timeline          = sched->getTimeline();          // safe: lock held
+    snap.currentProcessId  = sched->getCurrentProcessId();  // safe: lock held
     snap.avgWaitingTime    = sched->getAvgWaitingTime();
     snap.avgTurnaroundTime = sched->getAvgTurnaroundTime();
     snap.currentTime       = sched->getCurrentTime();
