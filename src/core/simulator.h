@@ -50,8 +50,6 @@ public:
 
     void start();
     void stop();
-    void pause();
-    void resume();
     [[nodiscard]] bool isRunning() const { return running.load(); }
 
     void runBatch() const;

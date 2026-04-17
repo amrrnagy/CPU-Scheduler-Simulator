@@ -47,9 +47,6 @@ void simulator::stop() {
     if (sim_thread.joinable()) sim_thread.join();
 }
 
-void simulator::pause()  { paused = true;  }
-void simulator::resume() { paused = false; }
-
 void simulator::runBatch() const {
     sched->run();
     if (on_tick_callback) on_tick_callback();
