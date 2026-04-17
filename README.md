@@ -36,3 +36,14 @@ If you wish to modify the code, this project uses CMake and requires Qt 6.
 2. Open the project folder in your IDE.
 3. Ensure your build profile is set to **Release** (to avoid performance overhead from debug assertions).
 4. Build and Run the `CPU_Scheduler_Simulator` executable target.
+
+## Future Enhancements
+To further improve this project, the following features can be implemented:
+- **Additional Scheduling Algorithms**:
+  - Multilevel Queue Scheduling.
+  - Multilevel Feedback Queue Scheduling.
+- **Save/Load Functionality**:
+  - Allow users to save and load process configurations for later use.
+- **Improved GUI**:
+  - Add more interactive features, such as tooltips and animations.
+  - Enhance the visualization of the Gantt Chart and performance metrics.
