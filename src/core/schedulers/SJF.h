@@ -4,6 +4,7 @@
 #include "scheduler.h"
 #include <queue>
 
+// Non-preemptive SJF.
 class SJF : public scheduler {
     struct Comp_burst_time {
         bool operator()(const process& a, const process& b) const {
@@ -19,14 +20,31 @@ class SJF : public scheduler {
     bool     is_sorted        = false;
 
 public:
+    ~SJF() override { delete curr_process; }
     bool tick() override;
     void run()  override;
-    // FIX (Bug 9): override added so live Gantt shows the correct process
-    int getCurrentProcessId() const override {
+
+    [[nodiscard]] int getCurrentProcessId() const override {
         return curr_process ? curr_process->getId() : -1;
+    }
+
+    // Report the running process's ACTUAL remaining time,
+    [[nodiscard]] std::vector<std::pair<int,int>> getRemainingTimes() const override {
+        auto result = scheduler::getRemainingTimes(); // base: reads processesList
+        if (curr_process) {
+            // Replace the stale entry for the currently running process.
+            for (auto& [pid, rem] : result) {
+                if (pid == curr_process->getId()) {
+                    rem = curr_process->getRemainingTime();
+                    break;
+                }
+            }
+        }
+        return result;
     }
 };
 
+// Preemptive SJF (SRTF).
 class SRTF : public scheduler {
     struct Comp_remaining_time {
         bool operator()(const process* a, const process* b) const {
@@ -43,9 +61,10 @@ class SRTF : public scheduler {
 public:
     bool tick() override;
     void run()  override;
-    int getCurrentProcessId() const override {
+    [[nodiscard]] int getCurrentProcessId() const override {
         return curr_process ? curr_process->getId() : -1;
     }
+    // SRTF uses pointers into processesList — base implementation is correct.
 };
 
 #endif //BACKEND_SJF_H

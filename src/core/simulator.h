@@ -22,6 +22,16 @@ enum class SchedulerType {
     RoundRobin
 };
 
+// single atomic snapshot
+struct SimSnapshot {
+    std::vector<event>              timeline;
+    int                             currentProcessId = -1;
+    double                          avgWaitingTime   = 0;
+    double                          avgTurnaroundTime= 0;
+    int                             currentTime      = 0;
+    std::vector<std::pair<int,int>> remainingTimes;  // (pid, remaining) for table updates
+};
+
 class simulator {
     std::unique_ptr<scheduler> sched;
     std::atomic<bool>          running { false };
@@ -30,16 +40,13 @@ class simulator {
     std::mutex                 process_mutex;
 
 public:
-    // FIX (Bug 2): was private — GUI needs to assign this directly.
     std::function<void()> on_tick_callback;
 
     explicit simulator(SchedulerType type, int rr_quantum = 2);
     ~simulator();
 
-    void loadProcesses(const std::deque<process> &list) const;
+    void loadProcesses(const std::deque<process>& list) const;
     void addProcess(const process& p);
-
-    void setOnTickCallback(std::function<void()> cb) { on_tick_callback = std::move(cb); }
 
     void start();
     void stop();
@@ -49,13 +56,15 @@ public:
 
     void runBatch() const;
 
-    // FIX (Bug 1): getTimeline() was declared twice here — duplicate causes a compile error.
-    // Only one declaration kept.
-    [[nodiscard]] std::vector<event> getTimeline()         const { return sched ? sched->getTimeline()         : std::vector<event>{}; }
-    [[nodiscard]] double             getAvgWaitingTime()   const { return sched ? sched->getAvgWaitingTime()   : 0.0; }
-    [[nodiscard]] double             getAvgTurnaroundTime()const { return sched ? sched->getAvgTurnaroundTime(): 0.0; }
-    [[nodiscard]] int                getCurrentTime()      const { return sched ? sched->getCurrentTime()      : 0;   }
-    [[nodiscard]] int                getCurrentProcessId() const { return sched ? sched->getCurrentProcessId() : -1;  }
+    // The GUI calls this once per tick and gets a consistent view of state.
+    [[nodiscard]] SimSnapshot getSnapshot();
+
+    // For batch (instant) mode — safe because the thread is stopped.
+    [[nodiscard]] std::vector<event> getTimelineUnsafe() const {
+        return sched ? sched->getTimeline() : std::vector<event>{};
+    }
+    [[nodiscard]] double getAvgWaitingTimeUnsafe()    const { return sched ? sched->getAvgWaitingTime()    : 0.0; }
+    [[nodiscard]] double getAvgTurnaroundTimeUnsafe() const { return sched ? sched->getAvgTurnaroundTime() : 0.0; }
 };
 
 #endif //CPUSCHEDULERSIMULATOR_SIMULATOR_H
